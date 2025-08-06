@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  grupos-cmd:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - GOOGLE_CLOUD_PROJECT_ID=test-project
+      - FIRESTORE_EMULATOR_HOST=firestore:8081
+      - PUB_SUB_EMULATOR_HOST=pubsub:8085
+      - PORT=8080
+    depends_on:
+      - firestore
+      - pubsub
+
+  firestore:
+    image: google/cloud-sdk:latest
+    ports:
+      - "8081:8081"
+    command: gcloud beta emulators firestore start --host-port=0.0.0.0:8081
+
+  pubsub:
+    image: google/cloud-sdk:latest
+    ports:
+      - "8085:8085"
+    command: gcloud beta emulators pubsub start --project=test-project --host-port=0.0.0.0:8085
