@@ -7,8 +7,10 @@ import (
 	"net/http"
 	"time"
 
+	"log"
+
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/labstack/echo/v4"
 )
 
 // --- Request Structs ---
@@ -46,8 +48,8 @@ func NewHandler(repo repository.EventRepository, publisher event.Publisher) *Han
 }
 
 // RegisterRoutes registers the HTTP routes for the service.
-func (h *Handler) RegisterRoutes(e *echo.Echo) {
-	v1 := e.Group("/v1")
+func (h *Handler) RegisterRoutes(r *gin.Engine) {
+	v1 := r.Group("/v1")
 	grupos := v1.Group("/grupos")
 
 	grupos.POST("", h.CreateGrupo)
@@ -65,18 +67,21 @@ func (h *Handler) RegisterRoutes(e *echo.Echo) {
 // @Param grupo body CreateGrupoRequest true "Group information"
 // @Success 202 {object} domain.Event
 // @Router /v1/grupos [post]
-func (h *Handler) CreateGrupo(c echo.Context) error {
+func (h *Handler) CreateGrupo(c *gin.Context) {
 	var req CreateGrupoRequest
-	if err := c.Bind(&req); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
 	}
 
 	// Basic validation
 	if req.Nombre == "" || req.FundacionFecha == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, "nombre and fundacionFecha are required")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "nombre and fundacionFecha are required"})
+		return
 	}
 	if _, err := time.Parse("2006-01-02", req.FundacionFecha); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "invalid fundacionFecha format, expected YYYY-MM-DD")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid fundacionFecha format, expected YYYY-MM-DD"})
+		return
 	}
 
 	aggregateID := uuid.New().String()
@@ -84,21 +89,22 @@ func (h *Handler) CreateGrupo(c echo.Context) error {
 		aggregateID,
 		"GrupoCreado",
 		domain.GrupoCreado{
-			Nombre:        req.Nombre,
+			Nombre:         req.Nombre,
 			FundacionFecha: req.FundacionFecha,
 		},
 	)
 
-	if err := h.repo.Save(c.Request().Context(), event); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to save event")
+	if err := h.repo.Save(c.Request.Context(), event); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save event"})
+		return
 	}
 
-	if err := h.publisher.Publish(c.Request().Context(), event); err != nil {
+	if err := h.publisher.Publish(c.Request.Context(), event); err != nil {
 		// Log the error but don't fail the request, as the event is already saved.
-		c.Logger().Error("failed to publish event: ", err)
+		log.Printf("failed to publish event: %v", err)
 	}
 
-	return c.JSON(http.StatusAccepted, event)
+	c.JSON(http.StatusAccepted, event)
 }
 
 // UpdateGrupo handles the update of a group.
@@ -111,13 +117,15 @@ func (h *Handler) CreateGrupo(c echo.Context) error {
 // @Param grupo body UpdateGrupoRequest true "Group new name"
 // @Success 202 {object} domain.Event
 // @Router /v1/grupos/{id} [put]
-func (h *Handler) UpdateGrupo(c echo.Context) error {
+func (h *Handler) UpdateGrupo(c *gin.Context) {
 	var req UpdateGrupoRequest
-	if err := c.Bind(&req); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
 	}
 	if req.Nombre == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, "nombre is required")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "nombre is required"})
+		return
 	}
 
 	aggregateID := c.Param("id")
@@ -127,15 +135,16 @@ func (h *Handler) UpdateGrupo(c echo.Context) error {
 		domain.GrupoActualizado{Nombre: req.Nombre},
 	)
 
-	if err := h.repo.Save(c.Request().Context(), event); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to save event")
+	if err := h.repo.Save(c.Request.Context(), event); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save event"})
+		return
 	}
 
-	if err := h.publisher.Publish(c.Request().Context(), event); err != nil {
-		c.Logger().Error("failed to publish event: ", err)
+	if err := h.publisher.Publish(c.Request.Context(), event); err != nil {
+		log.Printf("failed to publish event: %v", err)
 	}
 
-	return c.JSON(http.StatusAccepted, event)
+	c.JSON(http.StatusAccepted, event)
 }
 
 // AssignDirigente handles assigning a leader to a group.
@@ -148,13 +157,15 @@ func (h *Handler) UpdateGrupo(c echo.Context) error {
 // @Param dirigente body AssignDirigenteRequest true "Leader ID"
 // @Success 202 {object} domain.Event
 // @Router /v1/grupos/{id}/dirigentes [post]
-func (h *Handler) AssignDirigente(c echo.Context) error {
+func (h *Handler) AssignDirigente(c *gin.Context) {
 	var req AssignDirigenteRequest
-	if err := c.Bind(&req); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
 	}
 	if req.DirigenteID == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, "dirigenteId is required")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "dirigenteId is required"})
+		return
 	}
 
 	aggregateID := c.Param("id")
@@ -164,15 +175,16 @@ func (h *Handler) AssignDirigente(c echo.Context) error {
 		domain.DirigenteAsignadoAGrupo{DirigenteID: req.DirigenteID},
 	)
 
-	if err := h.repo.Save(c.Request().Context(), event); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to save event")
+	if err := h.repo.Save(c.Request.Context(), event); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save event"})
+		return
 	}
 
-	if err := h.publisher.Publish(c.Request().Context(), event); err != nil {
-		c.Logger().Error("failed to publish event: ", err)
+	if err := h.publisher.Publish(c.Request.Context(), event); err != nil {
+		log.Printf("failed to publish event: %v", err)
 	}
 
-	return c.JSON(http.StatusAccepted, event)
+	c.JSON(http.StatusAccepted, event)
 }
 
 // RemoveDirigente handles removing a leader from a group.
@@ -185,7 +197,7 @@ func (h *Handler) AssignDirigente(c echo.Context) error {
 // @Param dirigenteId path string true "Leader ID"
 // @Success 202 {object} domain.Event
 // @Router /v1/grupos/{id}/dirigentes/{dirigenteId} [delete]
-func (h *Handler) RemoveDirigente(c echo.Context) error {
+func (h *Handler) RemoveDirigente(c *gin.Context) {
 	aggregateID := c.Param("id")
 	dirigenteID := c.Param("dirigenteId")
 
@@ -195,13 +207,14 @@ func (h *Handler) RemoveDirigente(c echo.Context) error {
 		domain.DirigenteRemovidoDeGrupo{DirigenteID: dirigenteID},
 	)
 
-	if err := h.repo.Save(c.Request().Context(), event); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to save event")
+	if err := h.repo.Save(c.Request.Context(), event); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save event"})
+		return
 	}
 
-	if err := h.publisher.Publish(c.Request().Context(), event); err != nil {
-		c.Logger().Error("failed to publish event: ", err)
+	if err := h.publisher.Publish(c.Request.Context(), event); err != nil {
+		log.Printf("failed to publish event: %v", err)
 	}
 
-	return c.JSON(http.StatusAccepted, event)
+	c.JSON(http.StatusAccepted, event)
 }

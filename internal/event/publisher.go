@@ -6,10 +6,14 @@ import (
 	"grupos-cmd/internal/config"
 	"grupos-cmd/internal/domain"
 
+	"os"
+
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill-googlecloud/pkg/googlecloud"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"google.golang.org/api/option"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 // Publisher defines the interface for publishing events.
@@ -22,21 +26,6 @@ type Publisher interface {
 type watermillPublisher struct {
 	publisher message.Publisher
 }
-
-import (
-	"context"
-	"encoding/json"
-	"grupos-cmd/internal/config"
-	"grupos-cmd/internal/domain"
-	"os"
-
-	"github.com/ThreeDotsLabs/watermill"
-	"github.com/ThreeDotsLabs/watermill-googlecloud/pkg/googlecloud"
-	"github.com/ThreeDotsLabs/watermill/message"
-	"google.golang.org/api/option"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-)
 
 // NewWatermillPublisher creates a new Watermill publisher.
 func NewWatermillPublisher(cfg *config.Config) (Publisher, error) {

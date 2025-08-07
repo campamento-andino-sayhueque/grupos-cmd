@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"grupos-cmd/internal/config"
 	"grupos-cmd/internal/event"
 	"grupos-cmd/internal/handler"
@@ -14,12 +13,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
+	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 
 	_ "grupos-cmd/docs" // This is for swagger docs
-
-	echoSwagger "github.com/swaggo/echo-swagger"
 )
 
 // @title Grupos Command API
@@ -60,22 +58,26 @@ func main() {
 	defer publisher.Close()
 	logger.Println("Watermill publisher connected.")
 
-	// --- Echo ---
-	e := echo.New()
-	e.Use(middleware.Logger())
-	e.Use(middleware.Recover())
+	// --- Gin ---
+	r := gin.Default()
 
 	// --- Handler ---
 	h := handler.NewHandler(repo, publisher)
-	h.RegisterRoutes(e)
+	h.RegisterRoutes(r)
 
 	// --- Swagger ---
-	e.GET("/swagger/*", echoSwagger.WrapHandler)
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+	// --- Server ---
+	srv := &http.Server{
+		Addr:    ":" + cfg.Port,
+		Handler: r,
+	}
 
 	// --- Start Server ---
 	go func() {
-		if err := e.Start(":" + cfg.Port); err != nil && err != http.ErrServerClosed {
-			e.Logger.Fatal("shutting down the server")
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Fatalf("listen: %s\n", err)
 		}
 	}()
 	logger.Printf("Server started on port %s", cfg.Port)
@@ -90,8 +92,8 @@ func main() {
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer shutdownCancel()
 
-	if err := e.Shutdown(shutdownCtx); err != nil {
-		e.Logger.Fatal(err)
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		logger.Fatal("Server forced to shutdown:", err)
 	}
 
 	logger.Println("Server gracefully stopped.")

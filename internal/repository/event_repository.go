@@ -5,8 +5,12 @@ import (
 	"grupos-cmd/internal/config"
 	"grupos-cmd/internal/domain"
 
+	"os"
+
 	"cloud.google.com/go/firestore"
 	"google.golang.org/api/option"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 // EventRepository defines the interface for persisting events.
@@ -19,18 +23,6 @@ type firestoreRepository struct {
 	client     *firestore.Client
 	collection string
 }
-
-import (
-	"context"
-	"grupos-cmd/internal/config"
-	"grupos-cmd/internal/domain"
-	"os"
-
-	"cloud.google.com/go/firestore"
-	"google.golang.org/api/option"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-)
 
 // NewFirestoreRepository creates a new Firestore event repository.
 func NewFirestoreRepository(ctx context.Context, cfg *config.Config) (EventRepository, error) {

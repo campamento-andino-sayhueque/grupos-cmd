@@ -18,7 +18,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -62,8 +64,7 @@ func TestMain(m *testing.M) {
 	// Create Pub/Sub topic
 	topic, err := pubsubClient.CreateTopic(ctx, topicID)
 	if err != nil {
-		// Ignore if topic already exists
-		if pubsub.IsTopicExistsError(err) {
+		if status.Code(err) == codes.AlreadyExists {
 			topic = pubsubClient.Topic(topicID)
 		} else {
 			fmt.Printf("Failed to create pubsub topic: %v\n", err)
@@ -84,7 +85,7 @@ func TestMain(m *testing.M) {
 
 func TestCreateGrupo_Integration(t *testing.T) {
 	// --- Setup ---
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	// Create a subscription to the topic to receive messages

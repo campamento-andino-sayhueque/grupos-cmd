@@ -9,7 +9,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/labstack/echo/v4"
+	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -43,41 +43,45 @@ func (m *MockEventPublisher) Close() error {
 
 func TestHandler_CreateGrupo_Success(t *testing.T) {
 	// --- Setup ---
-	e := echo.New()
+	gin.SetMode(gin.TestMode)
+	rec := httptest.NewRecorder()
+	c, r := gin.CreateTestContext(rec)
+
 	reqBody := CreateGrupoRequest{
 		Nombre:         "Test Group",
 		FundacionFecha: "2024-01-01",
 	}
 	jsonBody, _ := json.Marshal(reqBody)
 	req := httptest.NewRequest(http.MethodPost, "/v1/grupos", bytes.NewReader(jsonBody))
-	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
+	req.Header.Set("Content-Type", "application/json")
+	c.Request = req
 
 	mockRepo := new(MockEventRepository)
 	mockPublisher := new(MockEventPublisher)
+	h := NewHandler(mockRepo, mockPublisher)
+	r.POST("/v1/grupos", h.CreateGrupo)
 
 	// Mock expectations
 	mockRepo.On("Save", mock.AnythingOfType("domain.Event")).Return(nil)
 	mockPublisher.On("Publish", mock.AnythingOfType("domain.Event")).Return(nil)
 
-	h := NewHandler(mockRepo, mockPublisher)
-
 	// --- Execute ---
-	err := h.CreateGrupo(c)
+	h.CreateGrupo(c)
 
 	// --- Assert ---
-	assert.NoError(t, err)
 	assert.Equal(t, http.StatusAccepted, rec.Code)
 
 	var responseEvent domain.Event
-	err = json.Unmarshal(rec.Body.Bytes(), &responseEvent)
+	err := json.Unmarshal(rec.Body.Bytes(), &responseEvent)
 	assert.NoError(t, err)
 	assert.Equal(t, "GrupoCreado", responseEvent.Header.EventType)
 
-	payload, ok := responseEvent.Payload.(map[string]interface{})
-	assert.True(t, ok)
-	assert.Equal(t, "Test Group", payload["nombre"])
+	// Since the payload is now a struct, we need to unmarshal it into the correct type
+	var payload domain.GrupoCreado
+	payloadBytes, _ := json.Marshal(responseEvent.Payload)
+	err = json.Unmarshal(payloadBytes, &payload)
+	assert.NoError(t, err)
+	assert.Equal(t, "Test Group", payload.Nombre)
 
 	mockRepo.AssertExpectations(t)
 	mockPublisher.AssertExpectations(t)
@@ -85,29 +89,29 @@ func TestHandler_CreateGrupo_Success(t *testing.T) {
 
 func TestHandler_CreateGrupo_BadRequest(t *testing.T) {
 	// --- Setup ---
-	e := echo.New()
+	gin.SetMode(gin.TestMode)
+	rec := httptest.NewRecorder()
+	c, r := gin.CreateTestContext(rec)
+
 	reqBody := CreateGrupoRequest{
 		Nombre:        "", // Invalid
 		FundacionFecha: "2024-01-01",
 	}
 	jsonBody, _ := json.Marshal(reqBody)
 	req := httptest.NewRequest(http.MethodPost, "/v1/grupos", bytes.NewReader(jsonBody))
-	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
+	req.Header.Set("Content-Type", "application/json")
+	c.Request = req
 
 	mockRepo := new(MockEventRepository)
 	mockPublisher := new(MockEventPublisher)
 	h := NewHandler(mockRepo, mockPublisher)
+	r.POST("/v1/grupos", h.CreateGrupo)
 
 	// --- Execute ---
-	err := h.CreateGrupo(c)
+	h.CreateGrupo(c)
 
 	// --- Assert ---
-	assert.Error(t, err)
-	httpError, ok := err.(*echo.HTTPError)
-	assert.True(t, ok)
-	assert.Equal(t, http.StatusBadRequest, httpError.Code)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	mockRepo.AssertNotCalled(t, "Save", mock.Anything)
 	mockPublisher.AssertNotCalled(t, "Publish", mock.Anything)
 }
