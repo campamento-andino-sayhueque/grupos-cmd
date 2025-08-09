@@ -1,5 +1,5 @@
 # --- Build Stage ---
-FROM golang:1.22.5-alpine AS builder
+FROM golang:1.24-alpine AS builder
 
 WORKDIR /app
 
@@ -22,6 +22,9 @@ WORKDIR /root/
 
 # Copy the Pre-built binary file from the previous stage
 COPY --from=builder /app/grupos-cmd .
+
+# Copy the .env file
+COPY .env .
 
 # Expose port 8080 to the outside world
 EXPOSE 8080

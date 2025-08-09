@@ -30,8 +30,15 @@ type watermillPublisher struct {
 // NewWatermillPublisher creates a new Watermill publisher.
 func NewWatermillPublisher(cfg *config.Config) (Publisher, error) {
 	var clientOptions []option.ClientOption
-	if os.Getenv("PUBSUB_EMULATOR_HOST") != "" {
-		clientOptions = append(clientOptions, option.WithEndpoint(os.Getenv("PUBSUB_EMULATOR_HOST")))
+	
+	// Check for both environment variable formats
+	emulatorHost := os.Getenv("PUBSUB_EMULATOR_HOST")
+	if emulatorHost == "" {
+		emulatorHost = os.Getenv("PUB_SUB_EMULATOR_HOST")
+	}
+	
+	if emulatorHost != "" {
+		clientOptions = append(clientOptions, option.WithEndpoint(emulatorHost))
 		clientOptions = append(clientOptions, option.WithoutAuthentication())
 		clientOptions = append(clientOptions, option.WithGRPCDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
 	}
