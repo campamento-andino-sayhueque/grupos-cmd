@@ -39,13 +39,3 @@ services:
         }' > firebase.json &&
         firebase emulators:start --project test-project
       "
-
-  pubsub-ui:
-    image: ghcr.io/neoscript/pubsub-emulator-ui:latest
-    ports:
-      - "4200:80"
-    depends_on:
-      - firebase-emulators
-    environment:
-      - PUBSUB_EMULATOR_HOST=firebase-emulators:8085
-      - PUBSUB_PROJECT1=test-project,grupos:grupos-sub
