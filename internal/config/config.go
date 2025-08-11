@@ -1,10 +1,8 @@
+
 package config
 
 import (
-	"log"
-	"os"
-
-	"github.com/joho/godotenv"
+	"github.com/spf13/viper"
 )
 
 // Config holds the application configuration.
@@ -15,26 +13,21 @@ type Config struct {
 	Port                 string
 }
 
-// New creates a new Config from environment variables.
+
+// New creates a new Config from environment variables using Viper.
 func New() *Config {
-	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found")
-	}
+	viper.SetDefault("PUB_SUB_TOPIC_ID", "grupos")
+	viper.SetDefault("FIRESTORE_COLLECTION", "eventos")
+	viper.SetDefault("PORT", "8080")
+
+	viper.AutomaticEnv() // Lee variables de entorno automáticamente
 
 	return &Config{
-		GoogleCloudProjectID: getEnv("GOOGLE_CLOUD_PROJECT_ID", ""),
-		PubSubTopicID:        getEnv("PUB_SUB_TOPIC_ID", "grupos"),
-		FirestoreCollection:  getEnv("FIRESTORE_COLLECTION", "eventos"),
-		Port:                 getEnv("PORT", "8080"),
+		GoogleCloudProjectID: viper.GetString("GOOGLE_CLOUD_PROJECT_ID"),
+		PubSubTopicID:        viper.GetString("PUB_SUB_TOPIC_ID"),
+		FirestoreCollection:  viper.GetString("FIRESTORE_COLLECTION"),
+		Port:                 viper.GetString("PORT"),
 	}
 }
 
-func getEnv(key, fallback string) string {
-	if value, ok := os.LookupEnv(key); ok {
-		return value
-	}
-	if fallback == "" {
-		log.Fatalf("Environment variable %s is not set", key)
-	}
-	return fallback
-}
+
