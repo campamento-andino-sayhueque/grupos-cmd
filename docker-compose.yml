@@ -1,0 +1,39 @@
+services:
+  grupos-cmd:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - GOOGLE_CLOUD_PROJECT_ID=test-project
+      - FIRESTORE_EMULATOR_HOST=firebase-emulators:8081
+      - PUBSUB_EMULATOR_HOST=firebase-emulators:8085
+      - PUB_SUB_EMULATOR_HOST=firebase-emulators:8085
+      - PUB_SUB_TOPIC_ID=grupos
+      - FIRESTORE_COLLECTION=eventos
+      - PORT=8080
+    depends_on:
+      - firebase-emulators
+
+  firebase-emulators:
+    image: node:20-alpine
+    ports:
+      - "8081:8081"
+      - "8085:8085"
+      - "4000:4000"
+    working_dir: /app
+    volumes:
+      - ./firebase-ui:/app
+    command: >
+      sh -c "
+        apk add --no-cache openjdk17-jre &&
+        npm install -g firebase-tools &&
+        echo '{\"projects\":{\"default\":\"test-project\"}}' > .firebaserc &&
+        echo '{
+          \"emulators\": {
+            \"firestore\": { \"port\": 8081, \"host\": \"0.0.0.0\" },
+            \"pubsub\": { \"port\": 8085, \"host\": \"0.0.0.0\" },
+            \"ui\": { \"enabled\": true, \"port\": 4000, \"host\": \"0.0.0.0\" }
+          }
+        }' > firebase.json &&
+        firebase emulators:start --project test-project
+      "

@@ -30,3 +30,8 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# Firebase logs
+firebase-debug.log
+firestore-debug.log
+pubsub-debug.log

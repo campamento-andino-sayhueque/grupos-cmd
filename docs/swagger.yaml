@@ -1,0 +1,162 @@
+basePath: /
+definitions:
+  domain.Event:
+    properties:
+      header:
+        $ref: '#/definitions/domain.EventHeader'
+      payload: {}
+    type: object
+  domain.EventHeader:
+    properties:
+      aggregateId:
+        type: string
+      eventId:
+        type: string
+      eventType:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  handler.AssignDirigenteRequest:
+    properties:
+      dirigenteId:
+        type: string
+    required:
+    - dirigenteId
+    type: object
+  handler.CreateGrupoRequest:
+    properties:
+      fundacionFecha:
+        type: string
+      nombre:
+        type: string
+    required:
+    - fundacionFecha
+    - nombre
+    type: object
+  handler.UpdateGrupoRequest:
+    properties:
+      nombre:
+        type: string
+    required:
+    - nombre
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: This is the command API for the Grupos service.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Grupos Command API
+  version: "1.0"
+paths:
+  /v1/grupos:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new group and publishes a GrupoCreado event.
+      parameters:
+      - description: Group information
+        in: body
+        name: grupo
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateGrupoRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/domain.Event'
+      summary: Create a new group
+      tags:
+      - grupos
+  /v1/grupos/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Updates a group's name and publishes a GrupoActualizado event.
+      parameters:
+      - description: Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Group new name
+        in: body
+        name: grupo
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdateGrupoRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/domain.Event'
+      summary: Update a group's name
+      tags:
+      - grupos
+  /v1/grupos/{id}/dirigentes:
+    post:
+      consumes:
+      - application/json
+      description: Assigns a leader to a group and publishes a DirigenteAsignadoAGrupo
+        event.
+      parameters:
+      - description: Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Leader ID
+        in: body
+        name: dirigente
+        required: true
+        schema:
+          $ref: '#/definitions/handler.AssignDirigenteRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/domain.Event'
+      summary: Assign a leader to a group
+      tags:
+      - grupos
+  /v1/grupos/{id}/dirigentes/{dirigenteId}:
+    delete:
+      consumes:
+      - application/json
+      description: Removes a leader from a group and publishes a DirigenteRemovidoDeGrupo
+        event.
+      parameters:
+      - description: Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Leader ID
+        in: path
+        name: dirigenteId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/domain.Event'
+      summary: Remove a leader from a group
+      tags:
+      - grupos
+swagger: "2.0"
