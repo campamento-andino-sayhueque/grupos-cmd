@@ -17,7 +17,7 @@ import (
 
 // CreateGrupoRequest is the request payload for creating a new group.
 type CreateGrupoRequest struct {
-	Nombre        string `json:"nombre" validate:"required"`
+	Nombre         string `json:"nombre" validate:"required"`
 	FundacionFecha string `json:"fundacionFecha" validate:"required"`
 }
 
